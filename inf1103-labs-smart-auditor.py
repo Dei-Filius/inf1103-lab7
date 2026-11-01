@@ -1,11 +1,14 @@
+from abc import ABC, abstractmethod
 import json
 from pathlib import Path
 
 INVENTORY_FILE_PATH: str = "data/inventory.json"
 inventory_file = Path(INVENTORY_FILE_PATH)
 
+SHIPPING_RATE = 4.0
 
-class Product:
+
+class Product(ABC):
     def __init__(self, product_id: str, name: str, price: float, stock: int):
         self.__product_id = product_id
         self.__name = name
@@ -35,6 +38,47 @@ class Product:
     @property
     def product_id(self) -> str:
         return self.__product_id
+
+
+class CanBeShipped(ABC):
+    @abstractmethod
+    def calculate_shipping_cost(self) -> float:
+        pass
+
+
+class PhysicalProduct(Product, CanBeShipped):
+    def __init__(self, product_id: str, name: str, price: float, stock: int, weight: int):
+        super().__init__(product_id, name, price, stock)
+        self.__weight = weight
+    
+    def display_information(self) -> None:
+        super().display_information()
+        print(f"*Weight: {self.__weight}")
+
+    def calculate_shipping_cost(self) -> float:
+        return self.__weight * SHIPPING_RATE
+
+    def to_dict(self) -> dict:
+        data = super().to_dict()
+        data["type"] = "PHYSICAL"
+        return data
+
+
+class DigitalProduct(Product):
+    def __init__(self, product_id: str, name: str, price: float, stock: int, download_size: int):
+        super().__init__(product_id, name, price, stock)
+        self.__download_size = download_size
+
+    def display_information(self) -> None:
+        super().display_information()
+        print(f"*Download Size(MB): {self.__download_size}")
+    
+    def to_dict(self) -> dict:
+        data = super().to_dict()
+        data["type"] = "DIGITAL"
+        return data
+
+
 
 
 class Inventory:
@@ -94,7 +138,7 @@ def save_inventory(inventory: Inventory) -> None:
     print()
     print("Saving inventory...")
     with inventory_file.open("w") as file:
-        json.dump(inventory.to_list(), file)
+        json.dump(inventory.to_list(), file, indent=4)
     print("Inventory saved successfully to", INVENTORY_FILE_PATH)
 
 
