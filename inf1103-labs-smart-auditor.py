@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import json
 from pathlib import Path
+from typing import Literal
 
 INVENTORY_FILE_PATH: str = "data/inventory.json"
 inventory_file = Path(INVENTORY_FILE_PATH)
@@ -12,6 +13,7 @@ class Product(ABC):
     """
     Abstract Product Class.
     """
+
     def __init__(self, product_id: str, name: str, price: float, stock: int):
         self.__product_id = product_id
         self.__name = name
@@ -51,6 +53,7 @@ class CanBeShipped(ABC):
     """
     Interface for shippable products.
     """
+
     @abstractmethod
     def calculate_shipping_cost(self) -> float:
         pass
@@ -58,14 +61,14 @@ class CanBeShipped(ABC):
 
 class PhysicalProduct(Product, CanBeShipped):
     def __init__(
-        self, product_id: str, name: str, price: float, stock: int, weight: int
+        self, product_id: str, name: str, price: float, stock: int, weight: float
     ):
         super().__init__(product_id, name, price, stock)
         self.__weight = weight
 
     def display_information(self) -> None:
         super().display_information()
-        print(f"*Weight: {self.__weight}")
+        print(f"*Weight: {self.__weight}kg")
 
     def calculate_shipping_cost(self) -> float:
         return self.__weight * SHIPPING_RATE
@@ -76,6 +79,7 @@ class PhysicalProduct(Product, CanBeShipped):
     def to_dict(self) -> dict:
         data = super().to_dict()
         data["type"] = "PHYSICAL"
+        data["weight"] = self.__weight
         return data
 
 
@@ -88,7 +92,7 @@ class DigitalProduct(Product):
 
     def display_information(self) -> None:
         super().display_information()
-        print(f"*Download Size(MB): {self.__download_size}")
+        print(f"*Download Size: {self.__download_size}MB")
 
     def get_fulfilment_info(self):
         return "Delievered digitally"
@@ -96,6 +100,7 @@ class DigitalProduct(Product):
     def to_dict(self) -> dict:
         data = super().to_dict()
         data["type"] = "DIGITAL"
+        data["download_size"] = self.__download_size
         return data
 
 
@@ -103,6 +108,7 @@ class Inventory:
     """
     Collection of Products.
     """
+
     def __init__(self) -> None:
         self.__products: dict[str, Product] = {}
 
@@ -136,19 +142,31 @@ def load_inventory() -> Inventory:
     inventory = Inventory()
     try:
         with inventory_file.open("r") as file:
-            for product in json.load(file):
-                inventory.add_product(
-                    Product(
-                        product["id"],
-                        product["name"],
-                        product["price"],
-                        product["stock"],
-                    )
-                )
+            for product_info in json.load(file):
+                match product_info["type"]:
+                    case "PHYSICAL":
+                        product = PhysicalProduct(
+                            product_info["id"],
+                            product_info["name"],
+                            product_info["price"],
+                            product_info["stock"],
+                            product_info["weight"],
+                        )
+                    case "DIGITAL":
+                        product = DigitalProduct(
+                            product_info["id"],
+                            product_info["name"],
+                            product_info["price"],
+                            product_info["stock"],
+                            product_info["download_size"],
+                        )
+                    case _:
+                        raise ValueError("Unknown product type.")
+                inventory.add_product(product)
     except FileNotFoundError:
         inventory_file.parent.mkdir(parents=True, exist_ok=True)
         inventory_file.touch()
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValueError):
         print("Inventory file might be corrupted.")
         print("Exiting...")
         exit()
@@ -175,7 +193,30 @@ def add_product(inventory: Inventory) -> None:
     name = get_str_input("Product Name: ").strip()
     price = get_price_input("Price (omit $ sign): ")
     stock = get_int_input("Stock Quantity: ", 0)
-    inventory.add_product(Product(product_id, name, price, stock))
+    product_type = get_product_type_input()
+
+    match product_type:
+        case "PHYSICAL":
+            weight = get_int_input("Product Weight(kg): ", 0)
+            product = PhysicalProduct(
+                product_id,
+                name,
+                price,
+                stock,
+                weight,
+            )
+        case "DIGITAL":
+            download_size = get_int_input("Product Downlaod Size(MB): ", 0)
+            product = DigitalProduct(
+                product_id,
+                name,
+                price,
+                stock,
+                download_size,
+            )
+        case _:
+            raise ValueError("Unknown product type.")
+    inventory.add_product(product)
     print("Product added successfully!")
 
 
@@ -283,6 +324,20 @@ def get_product_id_input() -> str:
             print("Invalid Product ID. Try again.")
 
 
+def get_product_type_input() -> Literal["PHYSICAL", "DIGITAL"]:
+    """
+    Get valid Product type from user.
+    """
+    while True:
+        try:
+            user_input = input("Product Type: ").strip().upper()
+            if user_input not in ["PHYSICAL", "DIGITAL"]:
+                raise ValueError()
+            return user_input
+        except ValueError:
+            print("Invalid Product ID. Try again.")
+
+
 def display_menu(menu: list[dict]) -> None:
     print()
     print("----------- MENU -----------")
@@ -312,7 +367,7 @@ INVENTORY MANAGEMENT SYSTEM
         while True:
             try:
                 display_menu(menu)
-                option = get_int_input("Enter option: ", 0, len(menu))
+                option = get_int_input("Enter option: ", 1, len(menu))
                 try:
                     menu[option - 1]["action"]()
                 except KeyboardInterrupt:
