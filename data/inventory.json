@@ -27,7 +27,7 @@
         "id": "P004",
         "name": "Davinci",
         "price": 100.0,
-        "stock": 100,
+        "stock": 50,
         "type": "DIGITAL",
         "download_size": 1000
     }

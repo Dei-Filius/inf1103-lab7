@@ -1,139 +1,15 @@
-from abc import ABC, abstractmethod
 import json
 from pathlib import Path
 from typing import Literal
+
+from digital_product import DigitalProduct
+from inventory import Inventory
+from physical_product import PhysicalProduct
 
 INVENTORY_FILE_PATH: str = "data/inventory.json"
 inventory_file = Path(INVENTORY_FILE_PATH)
 
 SHIPPING_RATE = 4.0
-
-
-class Product(ABC):
-    """
-    Abstract Product Class.
-    """
-
-    def __init__(self, product_id: str, name: str, price: float, stock: int):
-        self.__product_id = product_id
-        self.__name = name
-        self.__price = price
-        self.__stock = stock
-
-    def update_stock(self, stock: int) -> None:
-        if stock < 0:
-            raise ValueError("stock cannot be negative")
-
-        self.__stock = stock
-
-    def display_information(self) -> None:
-        print(f"ID: {self.__product_id}", end=" | ")
-        print(f"Name: {self.__name}", end=" | ")
-        print(f"Price: ${self.__price:.2f}", end=" | ")
-        print(f"Stock: {self.__stock}")
-
-    @abstractmethod
-    def get_fulfilment_info(self) -> str:
-        pass
-
-    def to_dict(self) -> dict:
-        return {
-            "id": self.__product_id,
-            "name": self.__name,
-            "price": self.__price,
-            "stock": self.__stock,
-        }
-
-    @property
-    def product_id(self) -> str:
-        return self.__product_id
-
-
-class CanBeShipped(ABC):
-    """
-    Interface for shippable products.
-    """
-
-    @abstractmethod
-    def calculate_shipping_cost(self) -> float:
-        pass
-
-
-class PhysicalProduct(Product, CanBeShipped):
-    def __init__(
-        self, product_id: str, name: str, price: float, stock: int, weight: float
-    ):
-        super().__init__(product_id, name, price, stock)
-        self.__weight = weight
-
-    def display_information(self) -> None:
-        super().display_information()
-        print(f"*Weight: {self.__weight}kg")
-
-    def calculate_shipping_cost(self) -> float:
-        return self.__weight * SHIPPING_RATE
-
-    def get_fulfilment_info(self) -> str:
-        return "Require physical shipping"
-
-    def to_dict(self) -> dict:
-        data = super().to_dict()
-        data["type"] = "PHYSICAL"
-        data["weight"] = self.__weight
-        return data
-
-
-class DigitalProduct(Product):
-    def __init__(
-        self, product_id: str, name: str, price: float, stock: int, download_size: int
-    ):
-        super().__init__(product_id, name, price, stock)
-        self.__download_size = download_size
-
-    def display_information(self) -> None:
-        super().display_information()
-        print(f"*Download Size: {self.__download_size}MB")
-
-    def get_fulfilment_info(self):
-        return "Delievered digitally"
-
-    def to_dict(self) -> dict:
-        data = super().to_dict()
-        data["type"] = "DIGITAL"
-        data["download_size"] = self.__download_size
-        return data
-
-
-class Inventory:
-    """
-    Collection of Products.
-    """
-
-    def __init__(self) -> None:
-        self.__products: dict[str, Product] = {}
-
-    def add_product(self, product: Product) -> None:
-        self.__products[product.product_id] = product
-
-    def search_product(self, product_id: str) -> Product | None:
-        return self.__products.get(product_id.upper())
-
-    def display_all(self) -> None:
-        print()
-        print("Current Inventory")
-        print("------------------------------------------------")
-        if len(self) > 0:
-            for _, product in self.__products.items():
-                product.display_information()
-        else:
-            print("Nothing...")
-        print("------------------------------------------------")
-
-    def to_list(self) -> list:
-        return [product.to_dict() for _, product in self.__products.items()]
-
-    def __len__(self) -> int:
-        return len(self.__products)
 
 
 def load_inventory() -> Inventory:
