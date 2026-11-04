@@ -1,6 +1,8 @@
 from product import Product
 from can_be_shipped import CanBeShipped
 
+SHIPPING_RATE = 4.0
+
 
 class PhysicalProduct(Product, CanBeShipped):
     def __init__(

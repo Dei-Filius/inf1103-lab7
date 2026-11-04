@@ -9,7 +9,7 @@ from physical_product import PhysicalProduct
 INVENTORY_FILE_PATH: str = "data/inventory.json"
 inventory_file = Path(INVENTORY_FILE_PATH)
 
-SHIPPING_RATE = 4.0
+
 
 
 def load_inventory() -> Inventory:

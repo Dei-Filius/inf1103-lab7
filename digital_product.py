@@ -12,7 +12,7 @@ class DigitalProduct(Product):
         super().display_information()
         print(f"*Download Size: {self.__download_size}MB")
 
-    def get_fulfilment_info(self):
+    def get_fulfilment_info(self) -> str:
         return "Delievered digitally"
 
     def to_dict(self) -> dict:
